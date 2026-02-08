@@ -5,7 +5,11 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
 class HandDetector:
-    def __init__(self, model_path="hand_landmarker.task", cam_id=0):
+    def __init__(self, model_path="hand_landmarker.task", cam_id=None):
+        
+        if cam_id is None:
+            cam_id = find_working_camera()
+
         self.cap = cv2.VideoCapture(cam_id)
 
         base_options = python.BaseOptions(
@@ -64,3 +68,11 @@ class HandDetector:
     def close(self):
         self.cap.release()
         cv2.destroyAllWindows()
+
+def find_working_camera(max_cams=5):
+    for i in range(max_cams):
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            cap.release()
+            return i
+    return 0 
