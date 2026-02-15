@@ -31,15 +31,23 @@ gravity = 0.5
 vy = 0
 ground = 300
 
-# -------- OBSTACLE --------
-obstacle = pygame.Surface((30, 40))
-obstacle.fill(RED)
-obstacle_rect = obstacle.get_rect()
-
-obstacle_rect.x = 800      # start from right side
-obstacle_rect.bottom = ground + 60
-
+# -------- OBSTACLES --------
+obstacles = []
 obstacle_speed = 5
+
+def create_obstacle(x_pos):
+    height = random.randint(20, 80)
+    obs = pygame.Surface((30, height))
+    obs.fill(RED)
+    obs_rect = obs.get_rect()
+    obs_rect.x = x_pos
+    obs_rect.bottom = ground + 60
+    return obs, obs_rect
+
+# Initialize 3 obstacles
+obstacles.append(create_obstacle(800))
+obstacles.append(create_obstacle(800 + 300 + random.randint(0, 100)))
+obstacles.append(create_obstacle(800 + 600 + random.randint(0, 100)))
 
 # Game state
 game_over = False
@@ -48,7 +56,7 @@ running = True
 restart_rect = pygame.Rect(300, 200, 200, 50)  # x, y, width, height
 
 def reset_game():
-    global game_over, player_rect, vy, obstacle_rect
+    global game_over, player_rect, vy, obstacles
 
     game_over = False
     vy= 0 
@@ -56,7 +64,10 @@ def reset_game():
     player_rect.x = 100
     player_rect.y = ground
 
-    obstacle_rect.x = 800
+    obstacles.clear()
+    obstacles.append(create_obstacle(800))
+    obstacles.append(create_obstacle(800 + 300 + random.randint(0, 100)))
+    obstacles.append(create_obstacle(800 + 600 + random.randint(0, 100)))
 
 while running:
     clock.tick(60)
@@ -104,25 +115,27 @@ while running:
             player_rect.y = ground
             vy = 0
 
-        # Move obstacle
-        obstacle_rect.x -= obstacle_speed
+        # Move obstacles
+        for i, (obs, obs_rect) in enumerate(obstacles):
+            obs_rect.x -= obstacle_speed
 
-        # Reset obstacle when it leaves screen
-        if obstacle_rect.right < 0:
-            obstacle_rect.x = 800
+            # Reset obstacle when it leaves screen
+            if obs_rect.right < 0:
+                # Place it at a random distance from the right edge, relative to screen or ensure spacing
+                # To ensure they don't overlap too much if both reset at same time (unlikely), 
+                # we could add logic but simple random offset usually works.
+                # Find the right-most obstacle to place this one behind
+                max_x = 800
+                for o, r in obstacles:
+                    if r.x > max_x:
+                        max_x = r.x
+                
+                new_obs, new_rect = create_obstacle(max_x + 300 + random.randint(0, 100))
+                obstacles[i] = (new_obs, new_rect)
 
-            random_height = random.randint(20,80)
-            obstacle = pygame.Surface((30, random_height))
-
-            obstacle.fill(RED)
-            obstacle_rect = obstacle.get_rect()
-
-            obstacle_rect.x = 800      # start from right side
-            obstacle_rect.bottom = ground + 60
-
-        # Check collision
-        if player_rect.colliderect(obstacle_rect):
-            game_over = True
+            # Check collision
+            if player_rect.colliderect(obs_rect):
+                game_over = True
 
     # -------- DRAWING --------
     screen.fill(WHITE)
@@ -130,7 +143,9 @@ while running:
     pygame.draw.line(screen, BLACK, (0, ground+60), (WIDTH, ground+60), 3)
 
     screen.blit(player_img, player_rect)
-    screen.blit(obstacle, obstacle_rect)
+    
+    for obs, obs_rect in obstacles:
+        screen.blit(obs, obs_rect)
 
     # Show "Game Over"
     if game_over:
